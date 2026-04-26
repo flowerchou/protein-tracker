@@ -29,16 +29,39 @@
         .progress-bar-fill { height: 100%; background: #4a6ee0; width: 0%; transition: width 0.5s ease-out, background-color 0.3s; }
         .progress-bar-fill.achieved { background: #ffb6c1; }
 
-        .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between;}
+        /* 快捷鍵區域樣式更新 */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .section-header h2 { font-size: 16px; font-weight: bold; margin: 0; }
+        /* 編輯按鈕樣式 */
+        .edit-btn { background: none; border: none; color: #888; font-size: 14px; cursor: pointer; padding: 0; transition: color 0.3s; display: flex; align-items: center; gap: 3px;}
+        .edit-btn:hover { color: #4a6ee0; }
         
         .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-        .quick-btn { background: #f0f2ff; color: #4a6ee0; border: 1px solid #dce4ff; padding: 12px 8px; border-radius: 10px; font-size: 13px; cursor: pointer; text-align: center; font-weight: 500; line-height: 1.4; transition: 0.2s;}
+        .quick-btn-wrapper { position: relative; }
+        .quick-btn { width: 100%; height: 100%; background: #f0f2ff; color: #4a6ee0; border: 1px solid #dce4ff; padding: 12px 8px; border-radius: 10px; font-size: 13px; cursor: pointer; text-align: center; font-weight: 500; line-height: 1.4; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center;}
         .quick-btn:hover { background: #e0e6ff; }
         .quick-btn:active { background: #dce4ff; transform: scale(0.98); }
+        
+        /* 編輯模式樣式 */
+        .delete-icon { display: none; position: absolute; top: -6px; right: -6px; background: #ff5c5c; color: white; border-radius: 50%; width: 22px; height: 22px; text-align: center; line-height: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 14px;}
+        .edit-mode .delete-icon { display: block; }
+        .edit-mode .quick-btn { pointer-events: none; opacity: 0.8; } /* 編輯模式下不可點擊紀錄 */
+        .add-quick-btn { background: #fff; border: 2px dashed #4a6ee0; color: #4a6ee0; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 12px 8px; transition: 0.2s;}
+        .add-quick-btn:hover { background: #f0f2ff; }
+
+        /* 新增自訂快捷鍵表單 */
+        .custom-key-form { display: none; flex-direction: column; gap: 10px; background: #fdfdfd; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        .custom-key-form.active { display: flex; }
+        .form-row { display: flex; gap: 10px; }
+        .form-row input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none;}
+        .form-row input:focus { border-color: #4a6ee0; }
+        .action-row { display: flex; gap: 10px; justify-content: flex-end;}
+        .save-btn { background: #4a6ee0; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold;}
+        .cancel-btn { background: #eee; color: #555; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold;}
 
         .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; border-top: 1px solid #eee; padding-top: 20px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; outline: none; transition: border 0.3s;}
-        input:focus { border-color: #4a6ee0; }
+        input.manual-input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; outline: none; transition: border 0.3s;}
+        input.manual-input:focus { border-color: #4a6ee0; }
         .estimate-msg { font-size: 13px; color: #d9822b; min-height: 18px; font-weight: bold; }
         
         .btn-add { background: #4a6ee0; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: bold; transition: 0.2s; }
@@ -70,7 +93,7 @@
 
     <div class="progress-section">
         <div class="target-text">
-            每日目標 ✏️ 
+            每日目標 🏅 
             <input type="number" id="userTarget" class="target-input" step="0.1" min="1" onchange="saveTarget()"> g
         </div>
         <div class="total-protein" id="totalProteinContainer"><span id="totalDisplay">0</span> <span class="unit">g</span></div>
@@ -79,24 +102,36 @@
         </div>
     </div>
 
-    <div class="section-title">常用快捷鍵</div>
-    <div class="quick-actions">
-        <button class="quick-btn" onclick="addQuickRecord('雞胸肉(100g)', 23)">🍗 雞胸肉<br>(100g: 23g)</button>
-        <button class="quick-btn" onclick="addQuickRecord('義美豌豆蛋白粉(25g)', 19.8)">🌿 義美蛋白粉<br>(25g: 19.8g)</button>
-        <button class="quick-btn" onclick="addQuickRecord('板豆腐(100g)', 8.5)">🫘 板豆腐<br>(100g: 8.5g)</button>
-        <button class="quick-btn" onclick="addQuickRecord('茶葉蛋', 7)">🥚 茶葉蛋<br>(1顆: 7g)</button>
-        <button class="quick-btn" onclick="addQuickRecord('豆漿(100ml)', 3.3)">🥛 豆漿<br>(100ml: 3.3g)</button>
-        <button class="quick-btn" onclick="addQuickRecord('光泉鮮奶優酪(100g)', 3.4)">🍦 光泉優酪<br>(100g: 3.4g)</button>
+    <div class="section-header">
+        <h2>常用快捷鍵</h2>
+        <button class="edit-btn" onclick="toggleEditMode()" id="editModeBtn">✏️ 編輯</button>
+    </div>
+    
+    <div class="quick-actions" id="quickActionsContainer">
+        </div>
+
+    <div class="custom-key-form" id="customKeyForm">
+        <div style="font-size: 13px; color: #666; font-weight: bold;">新增自訂快捷鍵</div>
+        <div class="form-row">
+            <input type="text" id="newKeyName" placeholder="名稱 (例: 蛋白棒)">
+            <input type="number" id="newKeyAmount" placeholder="含量(g)" step="0.1" style="width: 80px; flex: none;">
+        </div>
+        <div class="action-row">
+            <button class="cancel-btn" onclick="toggleAddForm()">取消</button>
+            <button class="save-btn" onclick="saveCustomKey()">儲存</button>
+        </div>
     </div>
 
     <div class="input-group">
-        <input type="text" id="foodInput" placeholder="輸入食材與份量 (如: 堅果 5g)">
+        <input type="text" id="foodInput" class="manual-input" placeholder="輸入食材與份量 (如: 堅果 5g)">
         <div class="estimate-msg" id="estimateMsg"></div>
-        <input type="number" id="proteinInput" placeholder="蛋白質含量 (g)" step="0.1">
+        <input type="number" id="proteinInput" class="manual-input" placeholder="蛋白質含量 (g)" step="0.1">
         <button class="btn-add" id="btnAdd" onclick="addRecord()">＋ 記錄下來</button>
     </div>
 
-    <div class="section-title">今日紀錄</div>
+    <div class="section-header">
+        <h2>今日紀錄</h2>
+    </div>
     <ul class="history-list" id="historyList"></ul>
 
     <div class="suggestions">
@@ -105,9 +140,8 @@
     </div>
 
     <div class="calendar-section">
-        <div class="section-title">
-            <span>月度進度 (達標顯示粉紅)</span>
-            <span id="monthLabel" style="font-size:12px; font-weight:normal;"></span>
+        <div class="section-header">
+            <h2>月度進度 <span id="monthLabel" style="font-size:12px; font-weight:normal; color:#888;"></span></h2>
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
@@ -118,23 +152,121 @@
 <script>
     const today = new Date();
     
+    // 初始化目標設定
     let currentTarget = parseFloat(localStorage.getItem('proteinTargetValue')) || 79.5;
     document.getElementById('userTarget').value = currentTarget;
 
+    // --- 智能估算資料庫 ---
     const foodDatabase = {
         "堅果": 15, "綜合堅果": 15, "核桃": 15, "杏仁": 21, "腰果": 18,
-        "雞胸肉": 23, "雞肉": 20, "牛肉": 20, "牛排": 20,
-        "豬肉": 20, "豬里肌": 20, "鮭魚": 20, "鮪魚": 25, "魚肉": 20,
-        "蝦": 18, "鮮蚵": 9, "蛤蜊": 10,
-        "雞蛋": 13, "茶葉蛋": 13, 
+        "雞胸肉": 23, "雞肉": 20, "牛肉": 20, "牛排": 20, "豬肉": 20, "豬里肌": 20, "鮭魚": 20, "鮪魚": 25, "魚肉": 20,
+        "蝦": 18, "鮮蚵": 9, "蛤蜊": 10, "雞蛋": 13, "茶葉蛋": 13, 
         "鮮奶": 3.3, "牛奶": 3.3, "豆漿": 3.3, "燕麥奶": 1,
         "板豆腐": 8.5, "嫩豆腐": 5, "豆干": 19,
-        "毛豆": 13, "高麗菜": 1.3, "花椰菜": 3,
-        "白飯": 2.6, "糙米": 3, "燕麥": 13,
-        "義美豌豆蛋白粉": 79.2, 
-        "光泉鮮奶優酪": 3.4
+        "毛豆": 13, "高麗菜": 1.3, "花椰菜": 3, "白飯": 2.6, "糙米": 3, "燕麥": 13,
+        "義美豌豆蛋白粉": 79.2, "光泉鮮奶優酪": 3.4
     };
 
+    // --- 快捷鍵邏輯 ---
+    const defaultQuickKeys = [
+        { name: "雞胸肉", amount: 23, icon: "🍗", desc: "100g" },
+        { name: "義美蛋白粉", amount: 19.8, icon: "🌿", desc: "25g" },
+        { name: "板豆腐", amount: 8.5, icon: "🫘", desc: "100g" },
+        { name: "茶葉蛋", amount: 7, icon: "🥚", desc: "1顆" },
+        { name: "豆漿", amount: 3.3, icon: "🥛", desc: "100ml" },
+        { name: "光泉優酪", amount: 3.4, icon: "🍦", desc: "100g" }
+    ];
+
+    let quickKeys = JSON.parse(localStorage.getItem('proteinQuickKeys_v2')) || defaultQuickKeys;
+    let isEditMode = false;
+
+    function renderQuickKeys() {
+        const container = document.getElementById('quickActionsContainer');
+        container.innerHTML = '';
+        
+        quickKeys.forEach((key, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'quick-btn-wrapper';
+            
+            const descHtml = key.desc ? `<br><span style="font-size:11px; font-weight:normal;">(${key.desc}: ${key.amount}g)</span>` : `<br><span style="font-size:11px; font-weight:normal;">(${key.amount}g)</span>`;
+            
+            wrapper.innerHTML = `
+                <button class="quick-btn" onclick="handleQuickClick(${index})">
+                    <span style="font-size:16px; margin-bottom:2px;">${key.icon}</span>
+                    <span>${key.name}${descHtml}</span>
+                </button>
+                <div class="delete-icon" onclick="deleteQuickKey(${index})">×</div>
+            `;
+            container.appendChild(wrapper);
+        });
+
+        if (isEditMode) {
+            container.classList.add('edit-mode');
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-quick-btn';
+            addBtn.innerHTML = '＋ 新增項目';
+            addBtn.onclick = toggleAddForm;
+            container.appendChild(addBtn);
+        } else {
+            container.classList.remove('edit-mode');
+        }
+    }
+
+    function handleQuickClick(index) {
+        if (isEditMode) return; 
+        const key = quickKeys[index];
+        const recordName = key.desc ? `${key.name}(${key.desc})` : key.name;
+        addQuickRecord(recordName, key.amount);
+    }
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        const btn = document.getElementById('editModeBtn');
+        if (isEditMode) {
+            // 進入編輯模式時，顯示 ✅ 完成
+            btn.innerText = '✅ 完成';
+            btn.style.color = '#4a6ee0';
+            btn.style.fontWeight = 'bold';
+        } else {
+            // 完成後，換回 ✏️ 編輯
+            btn.innerText = '✏️ 編輯';
+            btn.style.color = '#888';
+            btn.style.fontWeight = 'normal';
+            document.getElementById('customKeyForm').classList.remove('active');
+        }
+        renderQuickKeys();
+    }
+
+    function toggleAddForm() {
+        document.getElementById('customKeyForm').classList.toggle('active');
+    }
+
+    function saveCustomKey() {
+        const name = document.getElementById('newKeyName').value.trim();
+        const amount = parseFloat(document.getElementById('newKeyAmount').value);
+        
+        if (name && amount > 0) {
+            quickKeys.push({ name: name, amount: amount, icon: "🍽️", desc: "" });
+            localStorage.setItem('proteinQuickKeys_v2', JSON.stringify(quickKeys));
+            
+            document.getElementById('newKeyName').value = '';
+            document.getElementById('newKeyAmount').value = '';
+            document.getElementById('customKeyForm').classList.remove('active');
+            renderQuickKeys();
+        } else {
+            alert('請完整輸入名稱與蛋白質含量！');
+        }
+    }
+
+    function deleteQuickKey(index) {
+        if (confirm(`確定要刪除「${quickKeys[index].name}」的快捷鍵嗎？`)) {
+            quickKeys.splice(index, 1);
+            localStorage.setItem('proteinQuickKeys_v2', JSON.stringify(quickKeys));
+            renderQuickKeys();
+        }
+    }
+
+    // --- 核心追蹤邏輯 ---
     function getLocalDateString(date) {
         const d = new Date(date);
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -270,6 +402,8 @@
         if(confirm('確定要清空今日紀錄嗎？')) { appData[todayKey] = []; updateDisplay(); }
     }
 
+    // 初始載入
+    renderQuickKeys();
     renderSuggestions();
     updateDisplay();
 </script>
