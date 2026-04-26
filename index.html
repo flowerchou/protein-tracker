@@ -32,20 +32,19 @@
         /* 快捷鍵區域樣式更新 */
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }
         .section-header h2 { font-size: 16px; font-weight: bold; margin: 0; }
-        /* 編輯按鈕樣式 */
         .edit-btn { background: none; border: none; color: #888; font-size: 14px; cursor: pointer; padding: 0; transition: color 0.3s; display: flex; align-items: center; gap: 3px;}
         .edit-btn:hover { color: #4a6ee0; }
         
         .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
         .quick-btn-wrapper { position: relative; }
-        .quick-btn { width: 100%; height: 100%; background: #f0f2ff; color: #4a6ee0; border: 1px solid #dce4ff; padding: 12px 8px; border-radius: 10px; font-size: 13px; cursor: pointer; text-align: center; font-weight: 500; line-height: 1.4; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center;}
+        .quick-btn { width: 100%; height: 100%; background: #f0f2ff; color: #4a6ee0; border: 1px solid #dce4ff; padding: 12px 8px; border-radius: 10px; cursor: pointer; text-align: center; line-height: 1.4; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center;}
         .quick-btn:hover { background: #e0e6ff; }
         .quick-btn:active { background: #dce4ff; transform: scale(0.98); }
         
         /* 編輯模式樣式 */
         .delete-icon { display: none; position: absolute; top: -6px; right: -6px; background: #ff5c5c; color: white; border-radius: 50%; width: 22px; height: 22px; text-align: center; line-height: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 14px;}
         .edit-mode .delete-icon { display: block; }
-        .edit-mode .quick-btn { pointer-events: none; opacity: 0.8; } /* 編輯模式下不可點擊紀錄 */
+        .edit-mode .quick-btn { pointer-events: none; opacity: 0.8; }
         .add-quick-btn { background: #fff; border: 2px dashed #4a6ee0; color: #4a6ee0; border-radius: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 12px 8px; transition: 0.2s;}
         .add-quick-btn:hover { background: #f0f2ff; }
 
@@ -75,10 +74,14 @@
         .suggestions h3 { margin: 0 0 10px 0; font-size: 15px; color: #d9822b; }
         .suggestions ul { margin: 0; padding-left: 20px; color: #555; }
 
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
-        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; border-radius: 6px; background: #eee; color: #999; }
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 8px; text-align: center; }
+        .cal-weekday { font-size: 12px; font-weight: bold; color: #888; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; border-radius: 8px; background: #eee; color: #999; box-sizing: border-box;}
+        .cal-day.empty { background: transparent; color: transparent; box-shadow: none; pointer-events: none; }
         .cal-day.has-data { background: #dce4ff; color: #4a6ee0; }
         .cal-day.goal-reached { background: #ffb6c1; color: #d63384; font-weight: bold; box-shadow: 0 2px 5px rgba(255, 182, 193, 0.5); }
+        .cal-day.today { border: 2px solid #4a6ee0; color: #333; font-weight: bold; }
 
         .reset-btn { background: #fff; color: #ff5c5c; border: 1px solid #ff5c5c; width: 100%; margin-top: 10px; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: bold;}
     </style>
@@ -107,8 +110,7 @@
         <button class="edit-btn" onclick="toggleEditMode()" id="editModeBtn">✏️ 編輯</button>
     </div>
     
-    <div class="quick-actions" id="quickActionsContainer">
-        </div>
+    <div class="quick-actions" id="quickActionsContainer"></div>
 
     <div class="custom-key-form" id="customKeyForm">
         <div style="font-size: 13px; color: #666; font-weight: bold;">新增自訂快捷鍵</div>
@@ -143,6 +145,17 @@
         <div class="section-header">
             <h2>月度進度 <span id="monthLabel" style="font-size:12px; font-weight:normal; color:#888;"></span></h2>
         </div>
+        
+        <div class="calendar-header">
+            <div class="cal-weekday">一</div>
+            <div class="cal-weekday">二</div>
+            <div class="cal-weekday">三</div>
+            <div class="cal-weekday">四</div>
+            <div class="cal-weekday">五</div>
+            <div class="cal-weekday">六</div>
+            <div class="cal-weekday">日</div>
+        </div>
+
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
@@ -152,11 +165,9 @@
 <script>
     const today = new Date();
     
-    // 初始化目標設定
     let currentTarget = parseFloat(localStorage.getItem('proteinTargetValue')) || 79.5;
     document.getElementById('userTarget').value = currentTarget;
 
-    // --- 智能估算資料庫 ---
     const foodDatabase = {
         "堅果": 15, "綜合堅果": 15, "核桃": 15, "杏仁": 21, "腰果": 18,
         "雞胸肉": 23, "雞肉": 20, "牛肉": 20, "牛排": 20, "豬肉": 20, "豬里肌": 20, "鮭魚": 20, "鮪魚": 25, "魚肉": 20,
@@ -167,17 +178,17 @@
         "義美豌豆蛋白粉": 79.2, "光泉鮮奶優酪": 3.4
     };
 
-    // --- 快捷鍵邏輯 ---
+    // 移除預設的圖示 (icon)
     const defaultQuickKeys = [
-        { name: "雞胸肉", amount: 23, icon: "🍗", desc: "100g" },
-        { name: "義美蛋白粉", amount: 19.8, icon: "🌿", desc: "25g" },
-        { name: "板豆腐", amount: 8.5, icon: "🫘", desc: "100g" },
-        { name: "茶葉蛋", amount: 7, icon: "🥚", desc: "1顆" },
-        { name: "豆漿", amount: 3.3, icon: "🥛", desc: "100ml" },
-        { name: "光泉優酪", amount: 3.4, icon: "🍦", desc: "100g" }
+        { name: "雞胸肉", amount: 23, desc: "100g" },
+        { name: "義美蛋白粉", amount: 19.8, desc: "25g" },
+        { name: "板豆腐", amount: 8.5, desc: "100g" },
+        { name: "茶葉蛋", amount: 7, desc: "1顆" },
+        { name: "豆漿", amount: 3.3, desc: "100ml" },
+        { name: "光泉優酪", amount: 3.4, desc: "100g" }
     ];
 
-    let quickKeys = JSON.parse(localStorage.getItem('proteinQuickKeys_v2')) || defaultQuickKeys;
+    let quickKeys = JSON.parse(localStorage.getItem('proteinQuickKeys_v3')) || defaultQuickKeys;
     let isEditMode = false;
 
     function renderQuickKeys() {
@@ -188,12 +199,13 @@
             const wrapper = document.createElement('div');
             wrapper.className = 'quick-btn-wrapper';
             
-            const descHtml = key.desc ? `<br><span style="font-size:11px; font-weight:normal;">(${key.desc}: ${key.amount}g)</span>` : `<br><span style="font-size:11px; font-weight:normal;">(${key.amount}g)</span>`;
+            // 純文字排版
+            const descHtml = key.desc ? `<div style="font-size:11px; font-weight:normal; margin-top:4px; color:#666;">(${key.desc}: ${key.amount}g)</div>` : `<div style="font-size:11px; font-weight:normal; margin-top:4px; color:#666;">(${key.amount}g)</div>`;
             
             wrapper.innerHTML = `
                 <button class="quick-btn" onclick="handleQuickClick(${index})">
-                    <span style="font-size:16px; margin-bottom:2px;">${key.icon}</span>
-                    <span>${key.name}${descHtml}</span>
+                    <div style="font-size:14px; font-weight:bold; color:#4a6ee0;">${key.name}</div>
+                    ${descHtml}
                 </button>
                 <div class="delete-icon" onclick="deleteQuickKey(${index})">×</div>
             `;
@@ -223,12 +235,10 @@
         isEditMode = !isEditMode;
         const btn = document.getElementById('editModeBtn');
         if (isEditMode) {
-            // 進入編輯模式時，顯示 ✅ 完成
             btn.innerText = '✅ 完成';
             btn.style.color = '#4a6ee0';
             btn.style.fontWeight = 'bold';
         } else {
-            // 完成後，換回 ✏️ 編輯
             btn.innerText = '✏️ 編輯';
             btn.style.color = '#888';
             btn.style.fontWeight = 'normal';
@@ -246,8 +256,8 @@
         const amount = parseFloat(document.getElementById('newKeyAmount').value);
         
         if (name && amount > 0) {
-            quickKeys.push({ name: name, amount: amount, icon: "🍽️", desc: "" });
-            localStorage.setItem('proteinQuickKeys_v2', JSON.stringify(quickKeys));
+            quickKeys.push({ name: name, amount: amount, desc: "" }); // 不再寫入 icon
+            localStorage.setItem('proteinQuickKeys_v3', JSON.stringify(quickKeys));
             
             document.getElementById('newKeyName').value = '';
             document.getElementById('newKeyAmount').value = '';
@@ -261,12 +271,11 @@
     function deleteQuickKey(index) {
         if (confirm(`確定要刪除「${quickKeys[index].name}」的快捷鍵嗎？`)) {
             quickKeys.splice(index, 1);
-            localStorage.setItem('proteinQuickKeys_v2', JSON.stringify(quickKeys));
+            localStorage.setItem('proteinQuickKeys_v3', JSON.stringify(quickKeys));
             renderQuickKeys();
         }
     }
 
-    // --- 核心追蹤邏輯 ---
     function getLocalDateString(date) {
         const d = new Date(date);
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -333,10 +342,21 @@
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = '';
-        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const firstDay = new Date(year, month, 1).getDay();
+        const offset = firstDay === 0 ? 6 : firstDay - 1;
+
+        for (let i = 0; i < offset; i++) {
+            const blankDiv = document.createElement('div');
+            blankDiv.className = 'cal-day empty';
+            grid.appendChild(blankDiv);
+        }
 
         for (let i = 1; i <= daysInMonth; i++) {
-            const dateStr = getLocalDateString(new Date(today.getFullYear(), today.getMonth(), i));
+            const dateStr = getLocalDateString(new Date(year, month, i));
             const dayDiv = document.createElement('div');
             dayDiv.className = 'cal-day';
             dayDiv.innerText = i;
@@ -346,6 +366,11 @@
                 if (dayTotal >= currentTarget) dayDiv.classList.add('goal-reached');
                 else if (dayTotal > 0) dayDiv.classList.add('has-data');
             }
+
+            if (dateStr === todayKey) {
+                dayDiv.classList.add('today');
+            }
+
             grid.appendChild(dayDiv);
         }
     }
@@ -402,7 +427,6 @@
         if(confirm('確定要清空今日紀錄嗎？')) { appData[todayKey] = []; updateDisplay(); }
     }
 
-    // 初始載入
     renderQuickKeys();
     renderSuggestions();
     updateDisplay();
