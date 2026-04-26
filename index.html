@@ -17,7 +17,11 @@
         .date { color: #888; font-size: 14px; }
 
         .progress-section { text-align: center; margin: 25px 0; padding: 20px; background: #fdfdfd; border-radius: 15px; border: 1px solid #eee; position: relative;}
-        .target-text { font-size: 14px; color: #666; margin-bottom: 10px; }
+        .target-text { font-size: 14px; color: #666; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 5px;}
+        /* 新增：自訂目標輸入框的樣式 */
+        .target-input { width: 60px; text-align: center; border: none; border-bottom: 2px solid #ddd; background: transparent; font-weight: bold; color: #4a6ee0; font-size: 16px; outline: none; transition: 0.3s; padding: 2px;}
+        .target-input:focus { border-bottom-color: #4a6ee0; }
+
         .total-protein { font-size: 42px; font-weight: bold; color: #4a6ee0; margin: 10px 0; transition: color 0.3s; }
         .total-protein.achieved { color: #d63384; }
         .unit { font-size: 16px; color: #666; font-weight: normal; }
@@ -66,7 +70,10 @@
     </div>
 
     <div class="progress-section">
-        <div class="target-text">每日目標：79.5 g</div>
+        <div class="target-text">
+            每日目標 ✏️ 
+            <input type="number" id="userTarget" class="target-input" step="0.1" min="1" onchange="saveTarget()"> g
+        </div>
         <div class="total-protein" id="totalProteinContainer"><span id="totalDisplay">0</span> <span class="unit">g</span></div>
         <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="progressBar"></div>
@@ -110,10 +117,12 @@
 </div>
 
 <script>
-    const TARGET_PROTEIN = 79.5;
     const today = new Date();
     
-    // 建立內建食物資料庫 (數值皆為每 100g 或 100ml 的蛋白質公克數)
+    // 初始化或讀取使用者的目標值 (預設 79.5)
+    let currentTarget = parseFloat(localStorage.getItem('proteinTargetValue')) || 79.5;
+    document.getElementById('userTarget').value = currentTarget;
+
     const foodDatabase = {
         "堅果": 15, "綜合堅果": 15, "核桃": 15, "杏仁": 21, "腰果": 18,
         "雞胸肉": 23, "雞肉": 20, "牛肉": 20, "牛排": 20,
@@ -155,15 +164,29 @@
         list.innerHTML = dailySuggestions[today.getDay()].map(item => `<li>${item}</li>`).join('');
     }
 
+    // 新增：儲存使用者自訂目標
+    function saveTarget() {
+        const inputVal = parseFloat(document.getElementById('userTarget').value);
+        if (!isNaN(inputVal) && inputVal > 0) {
+            currentTarget = inputVal;
+            localStorage.setItem('proteinTargetValue', currentTarget);
+            updateDisplay(); // 重新計算進度條與顏色
+        } else {
+            // 如果輸入不合法，恢復前一次的數值
+            document.getElementById('userTarget').value = currentTarget;
+        }
+    }
+
     function updateDisplay() {
         const todayRecords = appData[todayKey];
         const totalProtein = todayRecords.reduce((sum, record) => sum + record.amount, 0);
         document.getElementById('totalDisplay').innerText = totalProtein.toFixed(1);
         
-        let progressPercent = (totalProtein / TARGET_PROTEIN) * 100;
+        // 依據 currentTarget 計算進度
+        let progressPercent = (totalProtein / currentTarget) * 100;
         document.getElementById('progressBar').style.width = Math.min(progressPercent, 100) + '%';
 
-        const isAchieved = totalProtein >= TARGET_PROTEIN;
+        const isAchieved = totalProtein >= currentTarget;
         document.getElementById('totalProteinContainer').classList.toggle('achieved', isAchieved);
         document.getElementById('progressBar').classList.toggle('achieved', isAchieved);
         document.getElementById('btnAdd').classList.toggle('achieved', isAchieved);
@@ -193,7 +216,8 @@
 
             if (appData[dateStr]) {
                 const dayTotal = appData[dateStr].reduce((sum, r) => sum + r.amount, 0);
-                if (dayTotal >= TARGET_PROTEIN) dayDiv.classList.add('goal-reached');
+                // 依據 currentTarget 判斷月曆顏色
+                if (dayTotal >= currentTarget) dayDiv.classList.add('goal-reached');
                 else if (dayTotal > 0) dayDiv.classList.add('has-data');
             }
             grid.appendChild(dayDiv);
