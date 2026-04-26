@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProteinGo (蛋白快追)</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; padding: 20px; margin: 0; color: #333; }
+        .container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: 100%; max-width: 400px; }
+        
+        .header { text-align: center; margin-bottom: 20px; }
+        h1 { font-size: 22px; margin: 0 0 5px 0; }
+        .date { color: #888; font-size: 14px; }
+
+        .progress-section { text-align: center; margin: 25px 0; padding: 20px; background: #fdfdfd; border-radius: 15px; border: 1px solid #eee; position: relative;}
+        .target-text { font-size: 14px; color: #666; margin-bottom: 10px; }
+        .total-protein { font-size: 42px; font-weight: bold; color: #4a6ee0; margin: 10px 0; transition: color 0.3s; }
+        .total-protein.achieved { color: #d63384; }
+        .unit { font-size: 16px; color: #666; font-weight: normal; }
+        
+        .progress-bar-bg { width: 100%; height: 12px; background: #e0e5ff; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+        .progress-bar-fill { height: 100%; background: #4a6ee0; width: 0%; transition: width 0.5s ease-out, background-color 0.3s; }
+        .progress-bar-fill.achieved { background: #ffb6c1; }
+
+        .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; display: flex; justify-content: space-between;}
+        
+        .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+        .quick-btn { background: #f0f2ff; color: #4a6ee0; border: 1px solid #dce4ff; padding: 12px 8px; border-radius: 10px; font-size: 13px; cursor: pointer; text-align: center; font-weight: 500; line-height: 1.4; transition: 0.2s;}
+        .quick-btn:hover { background: #e0e6ff; }
+        .quick-btn:active { background: #dce4ff; transform: scale(0.98); }
+
+        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; border-top: 1px solid #eee; padding-top: 20px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; outline: none; transition: border 0.3s;}
+        input:focus { border-color: #4a6ee0; }
+        .estimate-msg { font-size: 13px; color: #d9822b; min-height: 18px; font-weight: bold; }
+        
+        .btn-add { background: #4a6ee0; color: white; border: none; padding: 12px; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-add:hover { background: #3552a8; }
+        .btn-add.achieved { background: #d63384; }
+
+        .history-list { list-style: none; padding: 0; margin: 0 0 25px 0; max-height: 120px; overflow-y: auto; }
+        .history-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #eee; font-size: 15px; }
+
+        .suggestions { background: #fff5e6; padding: 15px; border-radius: 12px; margin-bottom: 25px; font-size: 14px; line-height: 1.6; }
+        .suggestions h3 { margin: 0 0 10px 0; font-size: 15px; color: #d9822b; }
+        .suggestions ul { margin: 0; padding-left: 20px; color: #555; }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; border-radius: 6px; background: #eee; color: #999; }
+        .cal-day.has-data { background: #dce4ff; color: #4a6ee0; }
+        .cal-day.goal-reached { background: #ffb6c1; color: #d63384; font-weight: bold; box-shadow: 0 2px 5px rgba(255, 182, 193, 0.5); }
+
+        .reset-btn { background: #fff; color: #ff5c5c; border: 1px solid #ff5c5c; width: 100%; margin-top: 10px; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: bold;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>ProteinGo (蛋白快追)</h1>
+        <div class="date" id="todayDate"></div>
+    </div>
+
+    <div class="progress-section">
+        <div class="target-text">每日目標：79.5 g</div>
+        <div class="total-protein" id="totalProteinContainer"><span id="totalDisplay">0</span> <span class="unit">g</span></div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+    </div>
+
+    <div class="section-title">常用快捷鍵</div>
+    <div class="quick-actions">
+        <button class="quick-btn" onclick="addQuickRecord('雞胸肉(100g)', 23)">🍗 雞胸肉<br>(100g: 23g)</button>
+        <button class="quick-btn" onclick="addQuickRecord('義美豌豆蛋白粉(25g)', 19.8)">🌿 義美蛋白粉<br>(25g: 19.8g)</button>
+        <button class="quick-btn" onclick="addQuickRecord('板豆腐(100g)', 8.5)">🫘 板豆腐<br>(100g: 8.5g)</button>
+        <button class="quick-btn" onclick="addQuickRecord('茶葉蛋', 7)">🥚 茶葉蛋<br>(1顆: 7g)</button>
+        <button class="quick-btn" onclick="addQuickRecord('豆漿(100ml)', 3.3)">🥛 豆漿<br>(100ml: 3.3g)</button>
+        <button class="quick-btn" onclick="addQuickRecord('光泉鮮奶優酪(100g)', 3.4)">🍦 光泉優酪<br>(100g: 3.4g)</button>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="foodInput" placeholder="輸入食材與份量 (如: 堅果 5g)">
+        <div class="estimate-msg" id="estimateMsg"></div>
+        <input type="number" id="proteinInput" placeholder="蛋白質含量 (g)" step="0.1">
+        <button class="btn-add" id="btnAdd" onclick="addRecord()">＋ 記錄下來</button>
+    </div>
+
+    <div class="section-title">今日紀錄</div>
+    <ul class="history-list" id="historyList"></ul>
+
+    <div class="suggestions">
+        <h3 id="suggestionTitle">💡 今日推薦 (5項)</h3>
+        <ul id="suggestionList"></ul>
+    </div>
+
+    <div class="calendar-section">
+        <div class="section-title">
+            <span>月度進度 (達標顯示粉紅)</span>
+            <span id="monthLabel" style="font-size:12px; font-weight:normal;"></span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <button class="reset-btn" onclick="resetTodayData()">清空今日紀錄</button>
+</div>
+
+<script>
+    const TARGET_PROTEIN = 79.5;
+    const today = new Date();
+    
+    // 建立內建食物資料庫 (數值皆為每 100g 或 100ml 的蛋白質公克數)
+    const foodDatabase = {
+        "堅果": 15, "綜合堅果": 15, "核桃": 15, "杏仁": 21, "腰果": 18,
+        "雞胸肉": 23, "雞肉": 20, "牛肉": 20, "牛排": 20,
+        "豬肉": 20, "豬里肌": 20, "鮭魚": 20, "鮪魚": 25, "魚肉": 20,
+        "蝦": 18, "鮮蚵": 9, "蛤蜊": 10,
+        "雞蛋": 13, "茶葉蛋": 13, 
+        "鮮奶": 3.3, "牛奶": 3.3, "豆漿": 3.3, "燕麥奶": 1,
+        "板豆腐": 8.5, "嫩豆腐": 5, "豆干": 19,
+        "毛豆": 13, "高麗菜": 1.3, "花椰菜": 3,
+        "白飯": 2.6, "糙米": 3, "燕麥": 13,
+        "義美豌豆蛋白粉": 79.2, 
+        "光泉鮮奶優酪": 3.4
+    };
+
+    function getLocalDateString(date) {
+        const d = new Date(date);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    
+    const todayKey = getLocalDateString(today);
+    let appData = JSON.parse(localStorage.getItem('proteinAppData_v5')) || {};
+    if (!appData[todayKey]) appData[todayKey] = [];
+
+    document.getElementById('todayDate').innerText = today.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('monthLabel').innerText = today.toLocaleDateString('zh-TW', { month: 'long' });
+
+    const dailySuggestions = [
+        ["鮮蚵/海鮮：9g/100g", "毛豆：13g/100g", "低脂牛奶：3g/100ml", "南瓜子：8g/30g", "綜合堅果：5g/份"], 
+        ["水煮雞胸肉：23g/塊", "光泉優酪：3.4g/100g", "全麥吐司：4g/片", "溏心蛋：6.5g/顆", "酪梨：2g/顆"], 
+        ["茶葉蛋：7g/顆", "板豆腐：8.5g/100g", "鮪魚沙拉：15g/份", "無糖豆漿：3.3g/100ml", "毛豆莢：10g/盤"], 
+        ["低脂牛肉：20g/100g", "豆干：19g/100g", "腰果：5g/一把", "燕麥奶：2g/200ml", "烤鯖魚：18g/份"], 
+        ["鮭魚菲力：20g/100g", "水煮蛋：6g/顆", "義美蛋白粉：19.8g/25g", "蝦仁：18g/100g", "鷹嘴豆：15g/100g"], 
+        ["豬里肌：20g/100g", "黑豆水：1g/瓶", "雞丸子：12g/份", "起司片：5g/片", "花生醬：4g/勺"], 
+        ["拿鐵(大杯)：10g/杯", "涮涮鍋(瘦肉)：25g/盤", "滷牛腱：22g/100g", "鯛魚片：18g/100g", "杏仁：6g/一把"] 
+    ];
+
+    function renderSuggestions() {
+        const list = document.getElementById('suggestionList');
+        list.innerHTML = dailySuggestions[today.getDay()].map(item => `<li>${item}</li>`).join('');
+    }
+
+    function updateDisplay() {
+        const todayRecords = appData[todayKey];
+        const totalProtein = todayRecords.reduce((sum, record) => sum + record.amount, 0);
+        document.getElementById('totalDisplay').innerText = totalProtein.toFixed(1);
+        
+        let progressPercent = (totalProtein / TARGET_PROTEIN) * 100;
+        document.getElementById('progressBar').style.width = Math.min(progressPercent, 100) + '%';
+
+        const isAchieved = totalProtein >= TARGET_PROTEIN;
+        document.getElementById('totalProteinContainer').classList.toggle('achieved', isAchieved);
+        document.getElementById('progressBar').classList.toggle('achieved', isAchieved);
+        document.getElementById('btnAdd').classList.toggle('achieved', isAchieved);
+
+        localStorage.setItem('proteinAppData_v5', JSON.stringify(appData));
+        renderHistory();
+        renderCalendar();
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = appData[todayKey].length ? 
+            appData[todayKey].map(r => `<li class="history-item"><span>${r.name}</span><span style="color:#4a6ee0; font-weight:bold;">+${r.amount}g</span></li>`).join('') :
+            '<li style="text-align:center; color:#aaa; font-size:14px; padding:10px;">尚未紀錄</li>';
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dateStr = getLocalDateString(new Date(today.getFullYear(), today.getMonth(), i));
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'cal-day';
+            dayDiv.innerText = i;
+
+            if (appData[dateStr]) {
+                const dayTotal = appData[dateStr].reduce((sum, r) => sum + r.amount, 0);
+                if (dayTotal >= TARGET_PROTEIN) dayDiv.classList.add('goal-reached');
+                else if (dayTotal > 0) dayDiv.classList.add('has-data');
+            }
+            grid.appendChild(dayDiv);
+        }
+    }
+
+    document.getElementById('foodInput').addEventListener('input', function() {
+        const inputStr = this.value;
+        const msgBox = document.getElementById('estimateMsg');
+        const proteinBox = document.getElementById('proteinInput');
+        
+        const amountMatch = inputStr.match(/(\d+(\.\d+)?)\s*(g|克|ml|毫升)/i);
+        let weight = 0;
+        if (amountMatch) {
+            weight = parseFloat(amountMatch[1]);
+        }
+
+        let foundFood = null;
+        for (let food in foodDatabase) {
+            if (inputStr.includes(food)) {
+                if (!foundFood || food.length > foundFood.length) {
+                    foundFood = food;
+                }
+            }
+        }
+
+        if (foundFood && weight > 0) {
+            const proteinPer100g = foodDatabase[foundFood];
+            const estimatedProtein = (weight / 100) * proteinPer100g;
+            
+            proteinBox.value = estimatedProtein.toFixed(1);
+            msgBox.innerText = `✨ 偵測到「${foundFood}」${weight}${amountMatch[3]}，約含 ${estimatedProtein.toFixed(1)}g 蛋白質`;
+        } else {
+            msgBox.innerText = ''; 
+        }
+    });
+
+    function addRecord() {
+        const name = document.getElementById('foodInput').value || '未命名食物';
+        const amount = parseFloat(document.getElementById('proteinInput').value);
+        if (amount > 0) {
+            appData[todayKey].push({ name, amount });
+            updateDisplay();
+            document.getElementById('foodInput').value = '';
+            document.getElementById('proteinInput').value = '';
+            document.getElementById('estimateMsg').innerText = ''; 
+        }
+    }
+
+    function addQuickRecord(name, amount) {
+        appData[todayKey].push({ name, amount });
+        updateDisplay();
+    }
+
+    function resetTodayData() {
+        if(confirm('確定要清空今日紀錄嗎？')) { appData[todayKey] = []; updateDisplay(); }
+    }
+
+    renderSuggestions();
+    updateDisplay();
+</script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('✅ ProteinGo 服務註冊成功！', reg))
+                .catch(err => console.log('❌ 服務註冊失敗！', err));
+        });
+    }
+</script>
+
+</body>
+</html>
